@@ -1,0 +1,18 @@
+# Python & Virtual Env
+__pycache__/
+*.pyc
+venv/
+env/
+.env
+
+# Output Directories
+saida/
+saida_*/
+packshots/
+
+# IDEs
+.vscode/
+.idea/
+
+# Local data (optional, keep if you want to share samples, but typically ignored)
+# entrada/
