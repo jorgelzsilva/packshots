@@ -38,7 +38,7 @@ Módulo reutilizável para detecção de capas. Usado pelo `script_packshot.py`.
 
 1. Crie uma pasta `entrada` na raiz do projeto.
 2. Coloque os arquivos PDF (Capa e Miolo/Interior) na pasta `entrada`.
-   - Exemplo: `9788500000000_capa.pdf` e `9788500000000_miolo.pdf`.
+   - Exemplo:  `9788500000000.epub`, `9788500000000_capa.pdf` e `9788500000000_miolo.pdf`.
 3. Execute o script desejado:
    ```bash
    python detector_v7.py
