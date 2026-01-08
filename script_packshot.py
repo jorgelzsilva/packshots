@@ -58,6 +58,7 @@ Parte II Entrada e saída
 <p><b>Parte I </b> - Fundamentos<br /><b>Capítulo 1</b> - Hello, World!</p><p><b>Parte II </b> - Fundamentos<br /><b>Capítulo 9</b> - Fluxos de entrada e saída</p>
 
 Observação: O texto de entrada pode conter números de página ou pontilhados (....). Ignore-os e foque apenas no título do capítulo e na numeração hierárquica. Se houver, inserir também apêndices e glossários, se houver capítulos antes da parte 1, também inserir. Não insira sub capítulos, como 1.1, 1.2, etc.
+Lembre-se! Se houver conteúdo extra como apêndices e glossários, insira-os.
 """
 
 def garantir_pasta(pasta):
