@@ -11,7 +11,28 @@ import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
 
-from config import MM_TO_PT, MARGEM_CORTE_MM, AI_URL, AI_MODEL, SYSTEM_PROMPT
+from config import MM_TO_PT, MARGEM_CORTE_MM, AI_URL, AI_MODEL, SYSTEM_PROMPT, EXPORT_PNG_WIDTH
+from PIL import Image
+import io
+
+
+def _salvar_png_redimensionado(pix, caminho):
+    """Salva PNG com redimensionamento opcional baseado em EXPORT_PNG_WIDTH"""
+    if EXPORT_PNG_WIDTH and EXPORT_PNG_WIDTH > 0:
+        # Converte pixmap para PIL Image
+        img_data = pix.tobytes("png")
+        img = Image.open(io.BytesIO(img_data))
+        
+        # Calcula nova altura mantendo proporção
+        largura_original, altura_original = img.size
+        proporcao = altura_original / largura_original
+        nova_altura = int(EXPORT_PNG_WIDTH * proporcao)
+        
+        # Redimensiona e salva
+        img_redimensionada = img.resize((EXPORT_PNG_WIDTH, nova_altura), Image.LANCZOS)
+        img_redimensionada.save(caminho)
+    else:
+        pix.save(caminho)
 
 
 def garantir_pasta(pasta):
@@ -133,7 +154,8 @@ def processar_miolo(pdf_path, epub_path, isbn, output_folder):
     
     for i, page_idx in enumerate(indices_para_exportar):
         pix = doc_vi[page_idx].get_pixmap(dpi=150)
-        pix.save(os.path.join(output_folder, f"{isbn}_vi_0{i+1}.png"))
+        caminho = os.path.join(output_folder, f"{isbn}_vi_0{i+1}.png")
+        _salvar_png_redimensionado(pix, caminho)
         
     print(f"   [OK] Imagens de vitrine geradas (1ª Fixa + {len(indices_para_exportar)-1} Aleatórias).")
     

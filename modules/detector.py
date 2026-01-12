@@ -9,7 +9,28 @@ import fitz
 import cv2
 import numpy as np
 
-from config import MM_TO_PT, EXPORTAR_CAPA
+from config import MM_TO_PT, EXPORTAR_CAPA, EXPORT_PNG_WIDTH
+from PIL import Image
+import io
+
+
+def _salvar_png_redimensionado(pix, caminho):
+    """Salva PNG com redimensionamento opcional baseado em EXPORT_PNG_WIDTH"""
+    if EXPORT_PNG_WIDTH and EXPORT_PNG_WIDTH > 0:
+        # Converte pixmap para PIL Image
+        img_data = pix.tobytes("png")
+        img = Image.open(io.BytesIO(img_data))
+        
+        # Calcula nova altura mantendo proporção
+        largura_original, altura_original = img.size
+        proporcao = altura_original / largura_original
+        nova_altura = int(EXPORT_PNG_WIDTH * proporcao)
+        
+        # Redimensiona e salva
+        img_redimensionada = img.resize((EXPORT_PNG_WIDTH, nova_altura), Image.LANCZOS)
+        img_redimensionada.save(caminho)
+    else:
+        pix.save(caminho)
 
 
 def _agrupar(lista, tol=5.0):
@@ -250,7 +271,7 @@ def processar_capa(pdf_path, output_folder, isbn, dpi=300, config_exportar=None)
                     pix = page.get_pixmap(clip=rect, dpi=dpi)
                     
                     caminho = os.path.join(output_folder, nomes[parte])
-                    pix.save(caminho)
+                    _salvar_png_redimensionado(pix, caminho)
                     resultado[parte] = caminho
                     print(f"   [EXPORTADO] {nomes[parte]} ({largura_mm:.1f}mm)")
         

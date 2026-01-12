@@ -12,6 +12,12 @@ MM_TO_PT = 2.83465
 # ============== MARGEM DE CORTE (MIOLO) ==============
 MARGEM_CORTE_MM = 10.3
 
+# ============== LARGURA DE EXPORTAÇÃO PNG ==============
+# Largura em pixels para exportação de PNGs
+# Se definido (ex: 1400), todos os PNGs serão redimensionados para essa largura
+# mantendo a proporção original. Se None, mantém o tamanho original.
+EXPORT_PNG_WIDTH = 500  # Ex: 1400, 800, ou None para manter original
+
 # ============== EXPORTAÇÃO DE CAPA ==============
 # True = exportar | False = não exportar
 # Usado no modo --capa
