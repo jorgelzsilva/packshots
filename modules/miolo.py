@@ -11,14 +11,19 @@ import ebooklib
 from ebooklib import epub
 from bs4 import BeautifulSoup
 
-from config import MM_TO_PT, MARGEM_CORTE_MM, AI_URL, AI_MODEL, SYSTEM_PROMPT, EXPORT_PNG_WIDTH
+from config import MM_TO_PT, MARGEM_CORTE_MM, AI_URL, AI_MODEL, AI_API_KEY, SYSTEM_PROMPT, EXPORT_PNG_WIDTH
 from modules.utils import salvar_png_redimensionado, garantir_pasta
 
 
 def chamar_ia_local(texto_sumario):
     """Chama a IA local para processar sumário"""
     try:
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {AI_API_KEY}",
+            "HTTP-Referer": "https://github.com/jorgelzsilva/packshots",  # Recomendado pela OpenRouter
+            "X-Title": "Packshots Auto"                                  # Recomendado pela OpenRouter
+        }
         payload = {
             "model": AI_MODEL,
             "messages": [

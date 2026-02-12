@@ -44,10 +44,8 @@ AI_MODEL = os.getenv("AI_MODEL", "local-model")
 
 # Adiciona /chat/completions se não estiver na URL
 AI_URL = AI_BASE_URL
-if AI_PROVIDER == "openrouter" and not AI_URL.endswith("/chat/completions"):
-    AI_URL = os.path.join(AI_URL, "chat/completions")
-elif not AI_URL.endswith("/chat/completions"):
-    AI_URL = f"{AI_URL}/chat/completions" if AI_URL.endswith("/") else f"{AI_URL}/chat/completions"
+if not AI_URL.endswith("/chat/completions"):
+    AI_URL = AI_URL.rstrip("/") + "/chat/completions"
 
 # Carrega o Prompt de IA de arquivo externo
 PROMPT_PATH = os.path.join(BASE_DIR, "assets", "prompts", "sumario_ia.txt")
