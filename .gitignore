@@ -6,9 +6,14 @@ env/
 .env
 
 # Output Directories
+entrada/
 saida/
 saida_*/
 packshots/
+pragmatic-programming/
+*.pdf
+*.epub
+
 
 # IDEs
 .vscode/

@@ -12,33 +12,7 @@ from ebooklib import epub
 from bs4 import BeautifulSoup
 
 from config import MM_TO_PT, MARGEM_CORTE_MM, AI_URL, AI_MODEL, SYSTEM_PROMPT, EXPORT_PNG_WIDTH
-from PIL import Image
-import io
-
-
-def _salvar_png_redimensionado(pix, caminho):
-    """Salva PNG com redimensionamento opcional baseado em EXPORT_PNG_WIDTH"""
-    if EXPORT_PNG_WIDTH and EXPORT_PNG_WIDTH > 0:
-        # Converte pixmap para PIL Image
-        img_data = pix.tobytes("png")
-        img = Image.open(io.BytesIO(img_data))
-        
-        # Calcula nova altura mantendo proporção
-        largura_original, altura_original = img.size
-        proporcao = altura_original / largura_original
-        nova_altura = int(EXPORT_PNG_WIDTH * proporcao)
-        
-        # Redimensiona e salva
-        img_redimensionada = img.resize((EXPORT_PNG_WIDTH, nova_altura), Image.LANCZOS)
-        img_redimensionada.save(caminho)
-    else:
-        pix.save(caminho)
-
-
-def garantir_pasta(pasta):
-    """Cria pasta se não existir"""
-    if not os.path.exists(pasta):
-        os.makedirs(pasta)
+from modules.utils import salvar_png_redimensionado, garantir_pasta
 
 
 def chamar_ia_local(texto_sumario):
@@ -54,11 +28,12 @@ def chamar_ia_local(texto_sumario):
             "temperature": 0.1,
             "stream": False
         }
-        response = requests.post(AI_URL, headers=headers, json=payload)
-        if response.status_code == 200:
-            data = response.json()
-            if 'choices' in data:
-                return data['choices'][0]['message']['content'].strip()
+        response = requests.post(AI_URL, headers=headers, json=payload, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        if 'choices' in data:
+            return data['choices'][0]['message']['content'].strip()
     except Exception as e:
         print(f"   [ERRO IA] {e}")
     return "<p>Erro ao processar sumário.</p>"
@@ -76,10 +51,11 @@ def extrair_toc_epub(epub_path):
         if book.toc:
             t = ""
             for x in book.toc:
-                t += f"{x.title if hasattr(x, 'title') else x[0].title}\n"
+                title = x.title if hasattr(x, 'title') else (x[0].title if isinstance(x, (list, tuple)) and hasattr(x[0], 'title') else str(x))
+                t += f"{title}\n"
             return t
-    except:
-        pass
+    except Exception as e:
+        print(f"   [AVISO] Falha ao extrair TOC do EPUB: {e}")
     return None
 
 
@@ -100,13 +76,17 @@ def extrair_toc_pdf(pdf_path):
     return None
 
 
-def processar_miolo(pdf_path, epub_path, isbn, output_folder):
+def processar_miolo(pdf_path, epub_path, ident, output_folder):
     """
     Gera:
     1. _ensaiodeleitura.pdf (15 págs, com corte de margem)
     2. _vi_0X.png (1ª Pág + 3 Aleatórias)
     3. _sumario.txt (via IA)
     """
+    # Design by Contract (DbC)
+    assert os.path.exists(pdf_path), f"Arquivo de miolo não encontrado: {pdf_path}"
+    garantir_pasta(output_folder)
+    
     print(f"   -> Iniciando processamento do miolo...")
     doc = fitz.open(pdf_path)
     pdf_ensaio = fitz.open()
@@ -133,7 +113,7 @@ def processar_miolo(pdf_path, epub_path, isbn, output_folder):
         )
         page.set_cropbox(novo_rect)
     
-    path_ensaio = os.path.join(output_folder, f"{isbn}_ensaiodeleitura.pdf")
+    path_ensaio = os.path.join(output_folder, f"{ident}_ensaiodeleitura.pdf")
     pdf_ensaio.save(path_ensaio)
     print(f"   [OK] PDF Ensaio salvo (Corte aplicado de {MARGEM_CORTE_MM}mm).")
     
@@ -154,8 +134,8 @@ def processar_miolo(pdf_path, epub_path, isbn, output_folder):
     
     for i, page_idx in enumerate(indices_para_exportar):
         pix = doc_vi[page_idx].get_pixmap(dpi=150)
-        caminho = os.path.join(output_folder, f"{isbn}_vi_0{i+1}.png")
-        _salvar_png_redimensionado(pix, caminho)
+        caminho = os.path.join(output_folder, f"{ident}_vi_0{i+1}.png")
+        salvar_png_redimensionado(pix, caminho, EXPORT_PNG_WIDTH)
         
     print(f"   [OK] Imagens de vitrine geradas (1ª Fixa + {len(indices_para_exportar)-1} Aleatórias).")
     
@@ -170,7 +150,7 @@ def processar_miolo(pdf_path, epub_path, isbn, output_folder):
     if raw_toc:
         print(f"   -> Sumário encontrado ({len(raw_toc)} caracteres). Enviando para a IA processar...")
         html_final = chamar_ia_local(raw_toc)
-        with open(os.path.join(output_folder, f"{isbn}_sumario.txt"), "w", encoding="utf-8") as f:
+        with open(os.path.join(output_folder, f"{ident}_sumario.txt"), "w", encoding="utf-8") as f:
             f.write(html_final)
         print(f"   [OK] Sumário processado via IA.")
     else:

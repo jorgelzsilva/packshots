@@ -10,27 +10,7 @@ import cv2
 import numpy as np
 
 from config import MM_TO_PT, EXPORTAR_CAPA, EXPORT_PNG_WIDTH
-from PIL import Image
-import io
-
-
-def _salvar_png_redimensionado(pix, caminho):
-    """Salva PNG com redimensionamento opcional baseado em EXPORT_PNG_WIDTH"""
-    if EXPORT_PNG_WIDTH and EXPORT_PNG_WIDTH > 0:
-        # Converte pixmap para PIL Image
-        img_data = pix.tobytes("png")
-        img = Image.open(io.BytesIO(img_data))
-        
-        # Calcula nova altura mantendo proporção
-        largura_original, altura_original = img.size
-        proporcao = altura_original / largura_original
-        nova_altura = int(EXPORT_PNG_WIDTH * proporcao)
-        
-        # Redimensiona e salva
-        img_redimensionada = img.resize((EXPORT_PNG_WIDTH, nova_altura), Image.LANCZOS)
-        img_redimensionada.save(caminho)
-    else:
-        pix.save(caminho)
+from modules.utils import salvar_png_redimensionado
 
 
 def _agrupar(lista, tol=5.0):
@@ -201,20 +181,21 @@ def _gerar_debug(page, estrutura, y_top, y_bottom, colunas, path_out):
     cv2.imwrite(path_out, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
 
-def processar_capa(pdf_path, output_folder, isbn, dpi=300, config_exportar=None):
+def processar_capa(pdf_path: str, output_folder: str, ident: str, dpi=300, config_exportar=None):
     """
     Processa um PDF de capa e exporta as imagens.
     
     Args:
         pdf_path: Caminho do PDF de capa
         output_folder: Pasta de saída
-        isbn: ISBN para nomear arquivos
+        ident: Identificador (ISBN ou nome do arquivo) para nomear arquivos
         dpi: Resolução das imagens (padrão 300)
-        config_exportar: Dict de configuração de exportação (usa EXPORTAR_CAPA se None)
-    
-    Returns:
-        dict com caminhos dos arquivos gerados
+        config_exportar: Dict de configuração de exportação
     """
+    # Design by Contract (DbC): Precondições
+    assert os.path.exists(pdf_path), f"Arquivo não encontrado: {pdf_path}"
+    assert os.path.isdir(output_folder), f"Pasta de saída inválida: {output_folder}"
+    
     if config_exportar is None:
         config_exportar = EXPORTAR_CAPA
     
@@ -227,72 +208,61 @@ def processar_capa(pdf_path, output_folder, isbn, dpi=300, config_exportar=None)
         'estrutura': {}
     }
     
-    if not os.path.exists(pdf_path):
-        print(f"   [ERRO] Arquivo de capa não encontrado: {pdf_path}")
+    doc = fitz.open(pdf_path)
+    page = doc[0]
+    
+    # Obtém TrimBox para altura
+    trimbox = page.trimbox
+    y_top = trimbox.y0
+    y_bottom = trimbox.y1
+    
+    # Detecta marcas de corte
+    colunas = _detectar_marcas_corte(page)
+    
+    if not colunas:
+        print(f"   [AVISO] Marcas de corte não detectadas em {pdf_path}")
+        doc.close()
         return resultado
     
-    try:
-        doc = fitz.open(pdf_path)
-        page = doc[0]
-        
-        # Obtém TrimBox para altura
-        trimbox = page.trimbox
-        y_top = trimbox.y0
-        y_bottom = trimbox.y1
-        
-        # Detecta marcas de corte
-        colunas = _detectar_marcas_corte(page)
-        
-        if not colunas:
-            print(f"   [AVISO] Marcas de corte não detectadas em {pdf_path}")
-            doc.close()
-            return resultado
-        
-        # Identifica estrutura
-        estrutura = _identificar_estrutura(colunas, trimbox)
-        
-        nomes = {
-            'capa': f"{isbn}_capa.png",
-            'quarta_capa': f"{isbn}_quartacapa.png",
-            'lombada': f"{isbn}_lombada.png",
-            'orelha_esq': f"{isbn}_orelha_esq.png",
-            'orelha_dir': f"{isbn}_orelha_dir.png"
-        }
-        
-        for parte, coords in estrutura.items():
-            if coords:
-                x0, x1 = coords
-                largura_mm = (x1 - x0) / MM_TO_PT
-                resultado['estrutura'][parte] = largura_mm
-                
-                # Só exporta se configurado
-                if config_exportar.get(parte, False):
-                    rect = fitz.Rect(x0, y_top, x1, y_bottom)
-                    pix = page.get_pixmap(clip=rect, dpi=dpi)
-                    
-                    caminho = os.path.join(output_folder, nomes[parte])
-                    _salvar_png_redimensionado(pix, caminho)
-                    resultado[parte] = caminho
-                    print(f"   [EXPORTADO] {nomes[parte]} ({largura_mm:.1f}mm)")
-        
-        # Debug
-        if config_exportar.get('debug', False):
-            debug_path = os.path.join(output_folder, f"{isbn}_DEBUG.png")
-            _gerar_debug(page, estrutura, y_top, y_bottom, colunas, debug_path)
-            print(f"   [DEBUG] {isbn}_DEBUG.png")
-        
-        doc.close()
-        
-    except Exception as e:
-        print(f"   [ERRO] Falha ao processar capa: {e}")
+    # Identifica estrutura
+    estrutura = _identificar_estrutura(colunas, trimbox)
     
+    nomes = {
+        'capa': f"{ident}_capa.png",
+        'quarta_capa': f"{ident}_quartacapa.png",
+        'lombada': f"{ident}_lombada.png",
+        'orelha_esq': f"{ident}_orelha_esq.png",
+        'orelha_dir': f"{ident}_orelha_dir.png"
+    }
+    
+    for parte, coords in estrutura.items():
+        if coords:
+            x0, x1 = coords
+            largura_mm = (x1 - x0) / MM_TO_PT
+            resultado['estrutura'][parte] = largura_mm
+            
+            # Só exporta se configurado
+            if config_exportar.get(parte, False):
+                rect = fitz.Rect(x0, y_top, x1, y_bottom)
+                pix = page.get_pixmap(clip=rect, dpi=dpi)
+                
+                caminho = os.path.join(output_folder, nomes[parte])
+                salvar_png_redimensionado(pix, caminho, EXPORT_PNG_WIDTH)
+                resultado[parte] = caminho
+                print(f"   [EXPORTADO] {nomes[parte]} ({largura_mm:.1f}mm)")
+    
+    # Debug
+    if config_exportar.get('debug', False):
+        debug_path = os.path.join(output_folder, f"{ident}_DEBUG.png")
+        _gerar_debug(page, estrutura, y_top, y_bottom, colunas, debug_path)
+        print(f"   [DEBUG] {ident}_DEBUG.png")
+    
+    doc.close()
     return resultado
 
 
-def processar_capa_simples(pdf_path, output_folder, isbn, dpi=300):
-    """
-    Extrai apenas capa e 4ª capa (para uso no fluxo principal).
-    """
+def processar_capa_simples(pdf_path, output_folder, ident, dpi=300):
+    """Extrai apenas capa e 4ª capa (fluxo principal)."""
     config_simples = {
         'capa': True,
         'quarta_capa': True,
@@ -301,4 +271,4 @@ def processar_capa_simples(pdf_path, output_folder, isbn, dpi=300):
         'orelha_dir': False,
         'debug': False,
     }
-    return processar_capa(pdf_path, output_folder, isbn, dpi, config_simples)
+    return processar_capa(pdf_path, output_folder, ident, dpi, config_simples)

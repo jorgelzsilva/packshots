@@ -12,6 +12,11 @@ MM_TO_PT = 2.83465
 # ============== MARGEM DE CORTE (MIOLO) ==============
 MARGEM_CORTE_MM = 10.3
 
+# ============== IDENTIFICAÇÃO DE ARQUIVOS ==============
+# Palavras-chave para identificar tipos de arquivos nos nomes
+KEYWORDS_MIOLO = ['miolo', 'interior']
+KEYWORDS_CAPA = ['capa']
+
 # ============== LARGURA DE EXPORTAÇÃO PNG ==============
 # Largura em pixels para exportação de PNGs
 # Se definido (ex: 1400), todos os PNGs serão redimensionados para essa largura
@@ -31,7 +36,7 @@ EXPORTAR_CAPA = {
 }
 
 # ============== CONFIGURAÇÕES DE IA ==============
-AI_URL = "http://localhost:1234/v1/chat/completions"
+AI_URL = "http://192.168.28.70:1234/v1/chat/completions"
 AI_MODEL = "local-model"
 
 # Prompt para processamento de sumário
