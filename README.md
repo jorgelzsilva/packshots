@@ -1,53 +1,76 @@
-# Packshot Scripts Collection
+# Packshots - Processador de Materiais Gráficos
 
-Este repositório contém um conjunto de scripts em Python para automação de geração de packshots (imagens de divulgação), detecção de marcas de corte em capas de livros (PDF) e geração de materiais promocionais (miolo, sumário via IA).
+O **Packshots** é uma ferramenta de automação para o processamento de materiais gráficos de livros. Ele facilita a criação de arquivos para divulgação, como prévias de leitura (ensaio de leitura), sumários gerados por IA e extração de imagens de capa e quarta capa a partir de arquivos PDF.
 
-## Scripts Principais
+## 🚀 Funcionalidades
 
-### `detector_v7.py`
-Versão mais recente do detector de marcas de corte.
-- **Função:** Identifica marcas de corte (crop marks) em PDFs de capa, calculando a lombada, capa, 4ª capa e orelhas.
-- **Destaque:** Usa lógica de "Y Mínimo Exato" para filtrar apenas as marcas de corte reais no topo da página.
+- **Processamento de Miolo**: Gera PDFs de "ensaio de leitura" com páginas selecionadas e margens de corte aplicadas.
+- **Detecção de Capas**: Identifica automaticamente marcas de corte em PDFs de capa para extrair a capa, quarta capa, lombada e orelhas.
+- **Integração com IA**: Gera sumários automáticos a partir do conteúdo do livro (PDF/Epub) utilizando modelos de IA (LM Studio, OpenAI, etc).
+- **Exportação Flexível**: Gera PNGs de alta qualidade para vitrines e sites de e-commerce.
 
-### `script_packshot.py`
-Script principal de orquestração ("Pipeline de Packshot").
-- **Função:**
-    - Processa capa (via `detector_capa`).
-    - Processa miolo (gera PDF de "ensaio de leitura" com 15 páginas cortadas).
-    - Gera PNGs de vitrine (página 1 + aleatórias).
-    - Gera sumário em texto (extraindo do PDF/Epub e limpando com IA local).
+## 🛠️ Módulos e Componentes
 
-### `detector_capa.py`
-Módulo reutilizável para detecção de capas. Usado pelo `script_packshot.py`.
+- **`main.py`**: Ponto de entrada da aplicação. Orquestra o fluxo de processamento baseado em flags.
+- **`config.py`**: Centraliza todas as configurações, como diretórios de entrada/saída, palavras-chave de identificação e parâmetros de IA.
+- **`modules/detector.py`**: Contém a lógica de processamento de PDFs de capa e detecção de marcas de corte.
+- **`modules/miolo.py`**: Responsável pelo processamento dos arquivos de interior/miolo e integração com EPUB para IA.
+- **`modules/utils.py`**: Funções utilitárias compartilhadas, como manipulação de pastas e redimensionamento de imagens.
+- **`assets/prompts/`**: Armazena os prompts utilizados para a comunicação com a IA.
 
-## Como Preparar o Ambiente
+## ⚙️ Flags e Uso
 
-1. **Instale o Python 3.10+**
-2. **Crie um ambiente virtual (recomendado):**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   venv\Scripts\activate     # Windows
-   ```
-3. **Instale as dependências:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+A aplicação opera principalmente através do diretório `entrada/` e salva os resultados em `saida/`.
 
-## Como Usar
+### Fluxo Completo (Miolo + Capa)
+Processa o miolo e extrai a capa básica.
+```bash
+python main.py
+```
 
-1. Crie uma pasta `entrada` na raiz do projeto.
-2. Coloque os arquivos PDF (Capa e Miolo/Interior) na pasta `entrada`.
-   - Exemplo:  `9788500000000.epub`, `9788500000000_capa.pdf` e `9788500000000_miolo.pdf`.
-3. Execute o script desejado:
-   ```bash
-   python detector_v7.py
-   # ou
-   python script_packshot.py
-   ```
-4. Os resultados estarão na pasta `saida` (ou `saida_detector_v7`).
+### Modo Capa Detalhado
+Processa apenas PDFs de capa, permitindo exportar partes específicas (lombada, orelhas, etc) conforme configurado no `config.py`.
+```bash
+python main.py --capa
+```
 
-## Estrutura de Pastas
+## 📋 Instalação
 
-- `entrada/`: Local para colocar os arquivos PDF input.
-- `saida/`: Local onde os arquivos processados (PNGs, PDFs cortados) serão salvos.
+### 1. Clonar o Repositório
+```bash
+git clone https://github.com/jorgelzsilva/packshots
+cd packshots
+```
+
+### 2. Criar Ambiente Virtual (Virtualenv)
+
+Crie um ambiente chamado `packshot` conforme o seu sistema operacional:
+
+#### Windows (PowerShell/CMD)
+```powershell
+python -m venv packshot
+.\packshot\Scripts\activate
+```
+
+#### Linux / macOS
+```bash
+python3 -m venv packshot
+source packshot/bin/activate
+```
+
+#### WSL (Windows Subsystem for Linux)
+```bash
+python3 -m venv packshot
+source packshot/bin/activate
+```
+
+### 3. Instalar Dependências
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configuração (Opcional)
+Se desejar usar as funções de IA, renomeie o arquivo `.env.example` (se disponível) para `.env` e configure suas chaves de API e URLs do provedor de IA.
+
+---
+Desenvolvido por [Jorge Luiz Silva](https://github.com/jorgelzsilva).
