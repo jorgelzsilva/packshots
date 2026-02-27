@@ -1,12 +1,12 @@
 # Packshots - Processador de Materiais Gráficos
 
-O **Packshots** é uma ferramenta de automação para o processamento de materiais gráficos de livros. Ele facilita a criação de arquivos para divulgação, como prévias de leitura (ensaio de leitura), sumários gerados por IA e extração de imagens de capa e quarta capa a partir de arquivos PDF.
+O **Packshots** é uma ferramenta de automação para o processamento de materiais gráficos de livros. Ele facilita a criação de arquivos para divulgação, como prévias de leitura (ensaio de leitura), sumários editados por IA e extração de imagens de capa e quarta capa a partir de arquivos PDF.
 
 ## 🚀 Funcionalidades
 
 - **Processamento de Miolo**: Gera PDFs de "ensaio de leitura" com páginas selecionadas e margens de corte aplicadas.
 - **Detecção de Capas**: Identifica automaticamente marcas de corte em PDFs de capa para extrair a capa, quarta capa, lombada e orelhas.
-- **Integração com IA**: Gera sumários automáticos a partir do conteúdo do livro (PDF/Epub) utilizando modelos de IA (LM Studio, OpenAI, etc).
+- **Integração com IA**: Edita sumários a partir do conteúdo do livro (PDF/Epub) utilizando modelos de IA (LM Studio, OpenAI, etc).
 - **Exportação Flexível**: Gera PNGs de alta qualidade para vitrines e sites de e-commerce.
 
 ## 🛠️ Módulos e Componentes
