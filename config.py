@@ -8,6 +8,7 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INPUT_DIR = os.path.join(BASE_DIR, "entrada")
 OUTPUT_DIR = os.path.join(BASE_DIR, "saida")
+WEBJOBS_DIR = os.path.join(BASE_DIR, "webjobs")
 
 # ============== CONVERSÕES ==============
 MM_TO_PT = 2.83465

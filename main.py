@@ -11,24 +11,9 @@ import shutil
 import argparse
 
 from config import INPUT_DIR, OUTPUT_DIR, EXPORTAR_CAPA, KEYWORDS_MIOLO, KEYWORDS_CAPA
-from modules.utils import garantir_pasta
+from modules.utils import garantir_pasta, extrair_identificador
 from modules.miolo import processar_miolo
 from modules.detector import processar_capa, processar_capa_simples
-
-
-def extrair_identificador(nome_arquivo):
-    """
-    Extrai um identificador único do nome do arquivo.
-    Tenta pegar o ISBN (primeira parte antes de '_') ou usa o nome do arquivo sem extensão.
-    """
-    nome_sem_ext = os.path.splitext(nome_arquivo)[0]
-    if '_' in nome_sem_ext:
-        partes = nome_sem_ext.split('_')
-        # Se a primeira parte parece ser um prefixo genérico como "Capa", tenta ser mais específico
-        if partes[0].lower() in KEYWORDS_CAPA and len(partes) > 1:
-            return f"{partes[0]}_{partes[1]}"
-        return partes[0]
-    return nome_sem_ext
 
 
 def processar_livro_completo():

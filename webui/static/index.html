@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Packshots</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <main class="card">
+    <header class="card-header">
+      <h1>Packshots</h1>
+      <p class="subtitle">Materiais gráficos de livros, automaticamente</p>
+    </header>
+
+    <!-- Estado 1: Configuração -->
+    <section id="state-setup" class="state">
+      <div class="mode-toggle" role="tablist" aria-label="Modo de processamento">
+        <div class="mode-pill" id="mode-pill"></div>
+        <button class="mode-option active" data-mode="capa" role="tab">Apenas Capa</button>
+        <button class="mode-option" data-mode="packshots" role="tab">Packshots</button>
+      </div>
+
+      <!-- Painel: Apenas Capa -->
+      <div id="panel-capa" class="panel">
+        <p class="hint">Arraste PDFs de capa para os slots — ou vários de uma vez.</p>
+        <div id="capa-slots" class="slots"></div>
+        <button id="btn-add-slot" class="btn-add" type="button" title="Adicionar slot">+</button>
+
+        <div class="options">
+          <span class="options-label">Gerar:</span>
+          <label class="chip"><input type="checkbox" data-opt="capa" checked><span>Capa</span></label>
+          <label class="chip"><input type="checkbox" data-opt="quarta_capa" checked><span>Contracapa</span></label>
+          <label class="chip"><input type="checkbox" data-opt="orelhas"><span>Orelhas</span></label>
+          <label class="chip"><input type="checkbox" data-opt="lombada"><span>Lombada</span></label>
+        </div>
+      </div>
+
+      <!-- Painel: Packshots -->
+      <div id="panel-packshots" class="panel hidden">
+        <p class="hint">Um livro por vez nos slots — ou arraste uma pasta para processar em lote.</p>
+        <div class="slots">
+          <div class="slot" data-slot="miolo">
+            <span class="slot-label">Miolo <em>(PDF, obrigatório)</em></span>
+            <span class="slot-file"></span>
+          </div>
+          <div class="slot" data-slot="capa">
+            <span class="slot-label">Capa <em>(PDF, opcional)</em></span>
+            <span class="slot-file"></span>
+          </div>
+          <div class="slot" data-slot="epub">
+            <span class="slot-label">EPUB <em>(opcional)</em></span>
+            <span class="slot-file"></span>
+          </div>
+        </div>
+        <div id="batch-zone" class="batch-zone">
+          <span>ou arraste aqui uma <strong>pasta</strong> com vários livros</span>
+          <span id="batch-info" class="batch-info"></span>
+        </div>
+      </div>
+
+      <button id="btn-process" class="btn-primary" type="button" disabled>Processar</button>
+      <p id="setup-error" class="error-msg"></p>
+    </section>
+
+    <!-- Estado 2: Avisos de anotações -->
+    <section id="state-warnings" class="state hidden">
+      <h2 class="warn-title">⚠ Comentários encontrados nos PDFs</h2>
+      <p class="hint">Os arquivos abaixo contêm anotações. Verifique se são as versões finais antes de continuar.</p>
+      <div id="warnings-list" class="warnings-list"></div>
+      <div class="decision-buttons">
+        <button id="btn-continue" class="btn-primary" type="button">Continuar mesmo assim</button>
+        <button id="btn-skip" class="btn-secondary" type="button">Pular pacotes com avisos</button>
+        <button id="btn-stop" class="btn-danger" type="button">Parar tudo</button>
+      </div>
+    </section>
+
+    <!-- Estado 3: Processamento -->
+    <section id="state-processing" class="state hidden">
+      <div class="progress-hero">
+        <span id="progress-pct" class="progress-pct">0<small>%</small></span>
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <p id="progress-msg" class="progress-msg">Iniciando…</p>
+      </div>
+      <div id="packs-progress" class="packs-progress"></div>
+    </section>
+
+    <!-- Estado 4: Resultados -->
+    <section id="state-results" class="state hidden">
+      <h2 class="results-title">Concluído ✓</h2>
+      <div id="results-list" class="results-list"></div>
+      <div class="results-actions">
+        <a id="btn-download-all" class="btn-primary" href="#" download>Baixar tudo (.zip)</a>
+        <button id="btn-restart" class="btn-secondary" type="button">Novo processamento</button>
+      </div>
+    </section>
+  </main>
+
+  <input type="file" id="file-input" multiple hidden>
+
+  <script src="/static/background.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

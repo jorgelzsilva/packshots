@@ -81,17 +81,25 @@ def extrair_toc_pdf(pdf_path):
     return None
 
 
-def processar_miolo(pdf_path, epub_path, ident, output_folder):
+def processar_miolo(pdf_path, epub_path, ident, output_folder, on_progress=None):
     """
     Gera:
     1. _ensaiodeleitura.pdf (15 págs, com corte de margem)
     2. _vi_0X.png (1ª Pág + 3 Aleatórias)
     3. _sumario.txt (via IA)
+
+    Args:
+        on_progress: Callback opcional (mensagem: str, fracao: float 0-1)
+
+    Returns:
+        dict com caminhos gerados: {'ensaio': str, 'vitrines': list[str], 'sumario': str|None}
     """
     # Design by Contract (DbC)
     assert os.path.exists(pdf_path), f"Arquivo de miolo não encontrado: {pdf_path}"
     garantir_pasta(output_folder)
-    
+
+    resultado = {'ensaio': None, 'vitrines': [], 'sumario': None}
+
     print(f"   -> Iniciando processamento do miolo...")
     doc = fitz.open(pdf_path)
     pdf_ensaio = fitz.open()
@@ -117,9 +125,13 @@ def processar_miolo(pdf_path, epub_path, ident, output_folder):
             r.y1 - margem_pt
         )
         page.set_cropbox(novo_rect)
-    
+
+        if on_progress and end_page > start_page:
+            on_progress(f"Gerando ensaio: página {i + 1}/{end_page}", 0.4 * ((i + 1 - start_page) / (end_page - start_page)))
+
     path_ensaio = os.path.join(output_folder, f"{ident}_ensaiodeleitura.pdf")
     pdf_ensaio.save(path_ensaio)
+    resultado['ensaio'] = path_ensaio
     print(f"   [OK] PDF Ensaio salvo (Corte aplicado de {MARGEM_CORTE_MM}mm).")
     
     # 2. GERA AS IMAGENS DE VITRINE (_vi_)
@@ -141,26 +153,40 @@ def processar_miolo(pdf_path, epub_path, ident, output_folder):
         pix = doc_vi[page_idx].get_pixmap(dpi=150)
         caminho = os.path.join(output_folder, f"{ident}_vi_0{i+1}.png")
         salvar_png_redimensionado(pix, caminho, EXPORT_PNG_WIDTH)
-        
+        resultado['vitrines'].append(caminho)
+
+        if on_progress:
+            on_progress(f"Gerando vitrine {i + 1}/{len(indices_para_exportar)}", 0.4 + 0.2 * ((i + 1) / len(indices_para_exportar)))
+
     print(f"   [OK] Imagens de vitrine geradas (1ª Fixa + {len(indices_para_exportar)-1} Aleatórias).")
     
     # 3. GERA O SUMÁRIO (IA)
     raw_toc = None
     if epub_path and os.path.exists(epub_path):
         raw_toc = extrair_toc_epub(epub_path)
-        
+
     if not raw_toc:
         raw_toc = extrair_toc_pdf(pdf_path)
-        
+
+    if on_progress:
+        on_progress("Sumário extraído", 0.7)
+
     if raw_toc:
         print(f"   -> Sumário encontrado ({len(raw_toc)} caracteres). Enviando para a IA processar...")
         html_final = chamar_ia_local(raw_toc)
-        with open(os.path.join(output_folder, f"{ident}_sumario.txt"), "w", encoding="utf-8") as f:
+        path_sumario = os.path.join(output_folder, f"{ident}_sumario.txt")
+        with open(path_sumario, "w", encoding="utf-8") as f:
             f.write(html_final)
+        resultado['sumario'] = path_sumario
         print(f"   [OK] Sumário processado via IA.")
     else:
         print(f"   [FALHA] Sumário não encontrado automaticamente.")
-    
+
+    if on_progress:
+        on_progress("Miolo processado", 1.0)
+
     doc.close()
     doc_vi.close()
     pdf_ensaio.close()
+
+    return resultado

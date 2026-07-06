@@ -181,16 +181,17 @@ def _gerar_debug(page, estrutura, y_top, y_bottom, colunas, path_out):
     cv2.imwrite(path_out, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
 
 
-def processar_capa(pdf_path: str, output_folder: str, ident: str, dpi=300, config_exportar=None):
+def processar_capa(pdf_path: str, output_folder: str, ident: str, dpi=300, config_exportar=None, on_progress=None):
     """
     Processa um PDF de capa e exporta as imagens.
-    
+
     Args:
         pdf_path: Caminho do PDF de capa
         output_folder: Pasta de saída
         ident: Identificador (ISBN ou nome do arquivo) para nomear arquivos
         dpi: Resolução das imagens (padrão 300)
         config_exportar: Dict de configuração de exportação
+        on_progress: Callback opcional (mensagem: str, fracao: float 0-1)
     """
     # Design by Contract (DbC): Precondições
     assert os.path.exists(pdf_path), f"Arquivo não encontrado: {pdf_path}"
@@ -226,7 +227,16 @@ def processar_capa(pdf_path: str, output_folder: str, ident: str, dpi=300, confi
     
     # Identifica estrutura
     estrutura = _identificar_estrutura(colunas, trimbox)
-    
+
+    if on_progress:
+        on_progress("Marcas de corte detectadas", 0.2)
+
+    partes_a_exportar = [
+        p for p, coords in estrutura.items()
+        if coords and config_exportar.get(p, False)
+    ]
+    exportadas = 0
+
     nomes = {
         'capa': f"{ident}_capa.png",
         'quarta_capa': f"{ident}_quartacapa.png",
@@ -250,6 +260,11 @@ def processar_capa(pdf_path: str, output_folder: str, ident: str, dpi=300, confi
                 salvar_png_redimensionado(pix, caminho, EXPORT_PNG_WIDTH)
                 resultado[parte] = caminho
                 print(f"   [EXPORTADO] {nomes[parte]} ({largura_mm:.1f}mm)")
+
+                exportadas += 1
+                if on_progress and partes_a_exportar:
+                    fracao = 0.2 + 0.8 * (exportadas / len(partes_a_exportar))
+                    on_progress(f"Exportado: {nomes[parte]}", fracao)
     
     # Debug
     if config_exportar.get('debug', False):
@@ -258,10 +273,14 @@ def processar_capa(pdf_path: str, output_folder: str, ident: str, dpi=300, confi
         print(f"   [DEBUG] {ident}_DEBUG.png")
     
     doc.close()
+
+    if on_progress:
+        on_progress("Capa processada", 1.0)
+
     return resultado
 
 
-def processar_capa_simples(pdf_path, output_folder, ident, dpi=300):
+def processar_capa_simples(pdf_path, output_folder, ident, dpi=300, on_progress=None):
     """Extrai apenas capa e 4ª capa (fluxo principal)."""
     config_simples = {
         'capa': True,
@@ -271,4 +290,4 @@ def processar_capa_simples(pdf_path, output_folder, ident, dpi=300):
         'orelha_dir': False,
         'debug': False,
     }
-    return processar_capa(pdf_path, output_folder, ident, dpi, config_simples)
+    return processar_capa(pdf_path, output_folder, ident, dpi, config_simples, on_progress=on_progress)
