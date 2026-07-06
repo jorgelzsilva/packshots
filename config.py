@@ -29,7 +29,7 @@ EXPORT_PNG_WIDTH = 1400  # Ex: 1400, 800, ou None para manter original
 # Usado no modo --capa
 EXPORTAR_CAPA = {
     'capa': True,
-    'quarta_capa': False,
+    'quarta_capa': True,
     'lombada': False,
     'orelha_esq': False,
     'orelha_dir': False,
