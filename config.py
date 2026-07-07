@@ -43,6 +43,18 @@ AI_BASE_URL = os.getenv("AI_BASE_URL", "http://localhost:1234/v1")
 AI_API_KEY = os.getenv("AI_API_KEY", "lm-studio")
 AI_MODEL = os.getenv("AI_MODEL", "local-model")
 
+# Modelos alternativos: se o modelo principal falhar (ex.: 429 do pool gratuito),
+# tenta estes em ordem. Configurável via .env (separado por vírgulas).
+_fallback_env = os.getenv("AI_FALLBACK_MODELS", "").strip()
+if _fallback_env:
+    AI_FALLBACK_MODELS = [m.strip() for m in _fallback_env.split(",") if m.strip()]
+else:
+    AI_FALLBACK_MODELS = [
+        "google/gemma-4-31b-it:free",
+        "openai/gpt-oss-20b:free",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+    ]
+
 # Adiciona /chat/completions se não estiver na URL
 AI_URL = AI_BASE_URL
 if not AI_URL.endswith("/chat/completions"):

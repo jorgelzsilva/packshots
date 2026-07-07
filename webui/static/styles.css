@@ -329,10 +329,89 @@ body {
   border-radius: 12px;
   padding: 14px 16px;
 }
-.result-pack h3 { font-size: 0.95rem; margin-bottom: 10px; color: var(--text); }
+.result-pack h3 {
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .result-pack .pack-note { font-size: 0.8rem; color: var(--text-dim); }
-.result-pack.erro { border-color: rgba(255, 84, 112, 0.3); }
-.result-pack.erro .pack-note { color: var(--danger); }
+.result-pack.tem-erro { border-color: rgba(255, 200, 87, 0.3); }
+
+.warn-icon { color: #ffc857; font-size: 1rem; }
+
+/* Artefatos individuais dentro do pack */
+.artifact {
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.artifact:first-of-type { border-top: none; }
+
+.artifact-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.artifact-label {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.artifact.erro .artifact-label { color: #ffc857; }
+.artifact-error { font-size: 0.78rem; color: var(--danger); margin-top: 4px; }
+
+.btn-retry {
+  background: none;
+  border: 1px solid rgba(53, 199, 255, 0.4);
+  color: var(--neon);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.btn-retry:hover:not(:disabled) {
+  background: var(--neon-soft);
+  box-shadow: 0 0 12px rgba(53, 199, 255, 0.25);
+}
+.btn-retry:disabled { opacity: 0.6; cursor: default; }
+.btn-retry.girando { animation: pulse 1.2s ease-in-out infinite; }
+
+@keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+.artifact-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* Seletor de modelo de IA */
+.model-select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--neon-border);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  max-width: 240px;
+}
+.model-select:focus { outline: none; border-color: var(--neon); }
+.model-select option { background: #0a1018; color: var(--text); }
+
+.ai-model-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ai-model-row label { color: var(--text-dim); font-size: 0.85rem; }
+.ai-model-row .model-select { max-width: 100%; flex: 1; min-width: 200px; }
 
 .result-file {
   display: flex;

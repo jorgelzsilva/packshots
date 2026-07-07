@@ -13,7 +13,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from config import KEYWORDS_MIOLO, KEYWORDS_CAPA, EXPORTAR_CAPA
+from config import KEYWORDS_MIOLO, KEYWORDS_CAPA, EXPORTAR_CAPA, AI_MODEL, AI_FALLBACK_MODELS
 from modules.utils import extrair_identificador
 from webui.jobs import manager, Pack
 
@@ -26,6 +26,13 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 @app.get("/")
 def index():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+
+@app.get("/api/models")
+def listar_modelos():
+    """Lista os modelos de IA disponíveis (principal + reservas)."""
+    modelos = [AI_MODEL] + [m for m in AI_FALLBACK_MODELS if m != AI_MODEL]
+    return {'models': modelos, 'default': AI_MODEL}
 
 
 def _salvar_uploads(job, files):
@@ -102,6 +109,7 @@ async def criar_job(
     mode: str = Form(...),
     options: str = Form("{}"),
     slots: str = Form(""),
+    ai_model: str = Form(""),
 ):
     if mode not in ('capa', 'packshots'):
         raise HTTPException(400, "Modo inválido. Use 'capa' ou 'packshots'.")
@@ -120,7 +128,7 @@ async def criar_job(
     else:
         config_exportar = {}
 
-    job = manager.criar_job(mode, config_exportar)
+    job = manager.criar_job(mode, config_exportar, ai_model=(ai_model or None))
     salvos = await asyncio.to_thread(_salvar_uploads, job, files)
 
     if not salvos:
@@ -199,6 +207,23 @@ async def decisao_job(job_id: str, payload: dict):
 
     manager.decidir(job, action)
     return job.to_dict()
+
+
+@app.post("/api/jobs/{job_id}/packs/{ident}/retry")
+async def retry_artefato(job_id: str, ident: str, payload: dict):
+    job = manager.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job não encontrado.")
+
+    key = payload.get('artifact')
+    if not key:
+        raise HTTPException(400, "Informe o artefato a reprocessar em 'artifact'.")
+
+    model = payload.get('model') or None
+    artefato = await asyncio.to_thread(manager.retry_artefato, job, ident, key, model)
+    if artefato is None:
+        raise HTTPException(404, "Pacote não encontrado.")
+    return {'artifact': artefato}
 
 
 @app.get("/api/jobs/{job_id}/results")

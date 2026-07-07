@@ -13,6 +13,7 @@
   let batchFiles = [];       // modo packshots (lote via pasta)
   let jobId = null;
   let eventSource = null;
+  let modelosIA = [];
 
   const states = {
     setup: $('#state-setup'),
@@ -24,6 +25,23 @@
   function mostrarEstado(nome) {
     Object.entries(states).forEach(([k, el]) => el.classList.toggle('hidden', k !== nome));
   }
+
+  function opcoesModelos(selecionado) {
+    return modelosIA.map((m, i) => {
+      const sel = (selecionado ? m === selecionado : i === 0) ? ' selected' : '';
+      return `<option value="${m}"${sel}>${m}</option>`;
+    }).join('');
+  }
+
+  // Carrega a lista de modelos de IA disponíveis
+  fetch('/api/models')
+    .then((r) => r.json())
+    .then((d) => {
+      modelosIA = d.models || [];
+      const sel = $('#ai-model-setup');
+      if (sel) sel.innerHTML = opcoesModelos(d.default);
+    })
+    .catch(() => {});
 
   // ---------- Toggle de modo ----------
   $$('.mode-option').forEach((btn) => {
@@ -248,17 +266,22 @@
       });
       form.append('options', JSON.stringify(opts));
       capaFiles.forEach((f) => form.append('files', f));
-    } else if (batchFiles.length) {
-      batchFiles.forEach((f) => form.append('files', f));
     } else {
-      const mapa = {};
-      for (const [slot, file] of Object.entries(slotFiles)) {
-        if (file) {
-          mapa[file.name] = slot;
-          form.append('files', file);
+      const modelo = $('#ai-model-setup') ? $('#ai-model-setup').value : '';
+      if (modelo) form.append('ai_model', modelo);
+
+      if (batchFiles.length) {
+        batchFiles.forEach((f) => form.append('files', f));
+      } else {
+        const mapa = {};
+        for (const [slot, file] of Object.entries(slotFiles)) {
+          if (file) {
+            mapa[file.name] = slot;
+            form.append('files', file);
+          }
         }
+        form.append('slots', JSON.stringify(mapa));
       }
-      form.append('slots', JSON.stringify(mapa));
     }
 
     let resposta;
@@ -411,30 +434,115 @@
 
     for (const pack of dados.packs) {
       const div = document.createElement('div');
-      div.className = 'result-pack' + (pack.status === 'erro' ? ' erro' : '');
+      div.dataset.ident = pack.ident;
 
-      let corpo = '';
-      if (pack.status === 'erro') {
-        corpo = `<p class="pack-note">Erro: ${pack.error}</p>`;
-      } else if (pack.skipped) {
-        corpo = '<p class="pack-note">Pulado (continha comentários).</p>';
-      } else if (!pack.outputs.length) {
-        corpo = '<p class="pack-note">Nenhum arquivo gerado.</p>';
+      const temErro = (pack.artifacts || []).some((a) => a.status === 'erro');
+      div.className = 'result-pack' + (temErro ? ' tem-erro' : '');
+
+      const header = document.createElement('h3');
+      header.innerHTML = `${pack.ident}${temErro ? ' <span class="warn-icon" title="Algum item falhou">⚠</span>' : ''}`;
+      div.appendChild(header);
+
+      if (pack.skipped) {
+        const p = document.createElement('p');
+        p.className = 'pack-note';
+        p.textContent = 'Pulado (continha comentários).';
+        div.appendChild(p);
+      } else if (!pack.artifacts || !pack.artifacts.length) {
+        const p = document.createElement('p');
+        p.className = 'pack-note';
+        p.textContent = pack.error || 'Nenhum arquivo gerado.';
+        div.appendChild(p);
       } else {
-        corpo = pack.outputs.map((o) => `
-          <div class="result-file">
-            <span>${o.name}</span>
-            <span class="file-size">${formatarTamanho(o.size)}</span>
-            <a href="${o.url}" download>Baixar ↓</a>
-          </div>`).join('');
+        for (const art of pack.artifacts) {
+          div.appendChild(renderArtefato(pack.ident, art));
+        }
       }
 
-      div.innerHTML = `<h3>${pack.ident}</h3>${corpo}`;
       lista.appendChild(div);
     }
 
     $('#btn-download-all').href = dados.zip_url;
     mostrarEstado('results');
+  }
+
+  function renderArtefato(ident, art) {
+    const row = document.createElement('div');
+    row.className = 'artifact' + (art.status === 'erro' ? ' erro' : '');
+    row.dataset.key = art.key;
+
+    const ehSumario = art.key === 'sumario';
+    const falhou = art.status === 'erro';
+
+    // Arquivos para download (quando houver)
+    const arquivos = (art.files || []).map((f) => `
+      <div class="result-file">
+        <span>${f.name}</span>
+        <span class="file-size">${formatarTamanho(f.size)}</span>
+        <a href="${f.url}" download>Baixar ↓</a>
+      </div>`).join('');
+
+    // Controles: seletor de modelo (só no sumário) + botão de reprocessar
+    let controles = '';
+    if (falhou || ehSumario) {
+      const seletor = ehSumario
+        ? `<select class="model-select" title="Modelo de IA">${opcoesModelos()}</select>`
+        : '';
+      const rotulo = falhou ? '↻ Tentar de novo' : '↻ Regenerar';
+      controles = `<div class="artifact-actions">${seletor}<button class="btn-retry" type="button">${rotulo}</button></div>`;
+    }
+
+    const warnLabel = falhou ? '<span class="warn-icon">⚠</span> ' : '';
+    row.innerHTML = `
+      <div class="artifact-head">
+        <span class="artifact-label">${warnLabel}${art.label}</span>
+        ${controles}
+      </div>
+      ${falhou ? `<p class="artifact-error">${art.error || 'Falhou.'}</p>` : ''}
+      ${arquivos}`;
+
+    const btn = row.querySelector('.btn-retry');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        const sel = row.querySelector('.model-select');
+        retryArtefato(ident, art.key, e.currentTarget, sel ? sel.value : null);
+      });
+    }
+    return row;
+  }
+
+  async function retryArtefato(ident, key, botao, model) {
+    botao.disabled = true;
+    botao.textContent = '↻ Processando…';
+    botao.classList.add('girando');
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/packs/${encodeURIComponent(ident)}/retry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ artifact: key, model: model || undefined }),
+      });
+      const dados = await res.json();
+      if (!res.ok) throw new Error(dados.detail || 'Falha ao reprocessar.');
+
+      const novaRow = renderArtefato(ident, dados.artifact);
+      botao.closest('.artifact').replaceWith(novaRow);
+      atualizarIconePack(ident);
+    } catch (err) {
+      botao.disabled = false;
+      botao.classList.remove('girando');
+      botao.textContent = '↻ Tentar de novo';
+      const erroEl = botao.closest('.artifact').querySelector('.artifact-error');
+      if (erroEl) erroEl.textContent = err.message;
+    }
+  }
+
+  function atualizarIconePack(ident) {
+    const packEl = document.querySelector(`.result-pack[data-ident="${CSS.escape(ident)}"]`);
+    if (!packEl) return;
+    const aindaTemErro = packEl.querySelector('.artifact.erro');
+    packEl.classList.toggle('tem-erro', !!aindaTemErro);
+    const icon = packEl.querySelector('h3 .warn-icon');
+    if (!aindaTemErro && icon) icon.remove();
   }
 
   function formatarTamanho(bytes) {

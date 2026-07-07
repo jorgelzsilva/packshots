@@ -7,7 +7,9 @@
       "PowerShell($env:PYTHONIOENCODING = 'utf-8'; Set-Location \"c:\\\\Users\\\\jlsilva\\\\Documents\\\\packshots\"; & \".\\\\packshot\\\\Scripts\\\\python.exe\" run_web.py)",
       "PowerShell(& \"c:\\\\Users\\\\jlsilva\\\\Documents\\\\packshots\\\\packshot\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\jlsilva\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-jlsilva-Documents-packshots\\\\9cee53bf-0fc1-4f33-a768-16fbd35cec87\\\\scratchpad\\\\make_test_pdfs.py\")",
       "PowerShell(Start-Sleep -Seconds 2; \\(Invoke-WebRequest -Uri \"http://127.0.0.1:8000/\" -UseBasicParsing\\).StatusCode)",
-      "PowerShell(& \"c:\\\\Users\\\\jlsilva\\\\Documents\\\\packshots\\\\packshot\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\jlsilva\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-jlsilva-Documents-packshots\\\\9cee53bf-0fc1-4f33-a768-16fbd35cec87\\\\scratchpad\\\\smoke_test.py\")"
+      "PowerShell(& \"c:\\\\Users\\\\jlsilva\\\\Documents\\\\packshots\\\\packshot\\\\Scripts\\\\python.exe\" \"C:\\\\Users\\\\jlsilva\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-jlsilva-Documents-packshots\\\\9cee53bf-0fc1-4f33-a768-16fbd35cec87\\\\scratchpad\\\\smoke_test.py\")",
+      "PowerShell(git -C \"c:\\\\Users\\\\jlsilva\\\\Documents\\\\packshots\" status --short)",
+      "PowerShell(git -C \"c:\\\\Users\\\\jlsilva\\\\Documents\\\\packshots\" remote -v)"
     ]
   }
 }

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from config import WEBJOBS_DIR
 from modules.utils import garantir_pasta
 from modules.anotacoes import listar_anotacoes
-from webui.pipeline import run_pack_capa, run_pack_completo
+from webui.pipeline import run_pack, gerar_artefato
 
 # Jobs com mais de 24h são removidos na inicialização
 JOB_MAX_IDADE_SEGUNDOS = 24 * 3600
@@ -29,7 +29,12 @@ class Pack:
     progress: float = 0.0
     status: str = 'pendente'  # pendente | processando | concluido | pulado | erro
     error: str = ''
-    outputs: list = field(default_factory=list)
+    artifacts: list = field(default_factory=list)  # [{key, label, status, error, files}]
+
+    @property
+    def outputs(self):
+        """Todos os arquivos gerados, achatados (usado para compatibilidade)."""
+        return [f for a in self.artifacts for f in a['files']]
 
     def to_dict(self):
         return {
@@ -40,6 +45,7 @@ class Pack:
             'progress': round(self.progress * 100, 1),
             'status': self.status,
             'error': self.error,
+            'artifacts': self.artifacts,
             'outputs': self.outputs,
         }
 
@@ -50,6 +56,7 @@ class Job:
     mode: str  # 'capa' | 'packshots'
     options: dict
     dir: str
+    ai_model: str = None  # modelo de IA preferido para o sumário
     packs: list = field(default_factory=list)
     status: str = 'scanning'
     events: list = field(default_factory=list)
@@ -104,12 +111,12 @@ class JobManager:
             except OSError:
                 pass
 
-    def criar_job(self, mode: str, options: dict) -> Job:
+    def criar_job(self, mode: str, options: dict, ai_model: str = None) -> Job:
         job_id = uuid.uuid4().hex[:12]
         job_dir = os.path.join(WEBJOBS_DIR, job_id)
         garantir_pasta(os.path.join(job_dir, 'entrada'))
         garantir_pasta(os.path.join(job_dir, 'saida'))
-        job = Job(id=job_id, mode=mode, options=options, dir=job_dir)
+        job = Job(id=job_id, mode=mode, options=options, dir=job_dir, ai_model=ai_model)
         self.jobs[job_id] = job
         return job
 
@@ -176,19 +183,18 @@ class JobManager:
                 })
 
             try:
-                if job.mode == 'capa':
-                    run_pack_capa(job, pack, on_progress)
-                else:
-                    run_pack_completo(job, pack, on_progress)
-
+                run_pack(job, pack, on_progress)
                 pack.progress = 1.0
-                pack.status = 'concluido'
-                pack.outputs = self._coletar_saidas(job, pack)
+                # Concluído se ao menos um artefato saiu; erro se todos falharam.
+                houve_ok = any(a['status'] == 'ok' for a in pack.artifacts)
+                pack.status = 'concluido' if houve_ok else 'erro'
+                if not houve_ok and pack.artifacts:
+                    pack.error = pack.artifacts[0].get('error', 'Nenhum artefato gerado.')
                 job.emit({
                     'type': 'pack_done',
                     'ident': pack.ident,
                     'overall_pct': job.overall_pct(),
-                    'outputs': pack.outputs,
+                    'artifacts': pack.artifacts,
                 })
             except Exception as e:
                 pack.status = 'erro'
@@ -204,20 +210,26 @@ class JobManager:
                 'overall_pct': 100.0,
             })
 
-    def _coletar_saidas(self, job: Job, pack: Pack):
-        """Lista os arquivos gerados na pasta de saída do pack."""
-        pasta = os.path.join(job.output_dir, pack.ident)
-        saidas = []
-        if os.path.isdir(pasta):
-            for nome in sorted(os.listdir(pasta)):
-                caminho = os.path.join(pasta, nome)
-                if os.path.isfile(caminho):
-                    saidas.append({
-                        'name': nome,
-                        'url': f'/api/jobs/{job.id}/files/{pack.ident}/{nome}',
-                        'size': os.path.getsize(caminho),
-                    })
-        return saidas
+    def retry_artefato(self, job: Job, ident: str, key: str, model: str = None):
+        """Reprocessa um único artefato de um pack. Retorna o artefato atualizado ou None."""
+        pack = next((p for p in job.packs if p.ident == ident), None)
+        if not pack:
+            return None
+
+        novo = gerar_artefato(job, pack, key, model=model)
+
+        # Substitui na lista existente ou adiciona
+        for i, a in enumerate(pack.artifacts):
+            if a['key'] == key:
+                pack.artifacts[i] = novo
+                break
+        else:
+            pack.artifacts.append(novo)
+
+        # Reavalia status do pack
+        if any(a['status'] == 'ok' for a in pack.artifacts):
+            pack.status = 'concluido'
+        return novo
 
 
 manager = JobManager()
